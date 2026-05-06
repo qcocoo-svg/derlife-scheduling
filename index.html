@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>得來素 生產排程與成本管理系統</title>
+<!-- SheetJS for Excel 匯入 -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+
+  :root {
+    --bg: #f7faec;
+    --paper: #ffffff;
+    --ink: #1A1A16;
+    --ink2: #2a2a22;
+    --ink3: #6b6b5a;
+    --gold: #C3F000;
+    --gold2: #FFAA00;
+    --red: #c0392b;
+    --green: #2d6a4f;
+    --border: #d6dfb4;
+    --border-light: #eaf0d4;
+    --tab-active: #C3F000;
+    --shadow: 0 2px 12px rgba(26,26,22,0.10);
+    --radius: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--ink);
+    padding: 18px 24px 14px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 3px solid var(--gold);
+  }
+  .header-logo {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--gold2);
+    letter-spacing: 4px;
+  }
+  .header-sub {
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 2px;
+    margin-top: 2px;
+  }
+
+  /* TABS */
+  .tabs-wrap {
+    background: var(--ink2);
+    display: flex;
+    overflow-x: auto;
+    gap: 2px;
+    padding: 0 8px;
+    border-bottom: 2px solid var(--border);
+  }
+  .tab-btn {
+    padding: 10px 18px;
+    font-size: 13px;
+    font-family: 'Noto Sans TC', sans-serif;
+    color: var(--gold);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+  .tab-btn:hover { color: var(--gold2); background: rgba(255,255,255,0.05); }
+  .tab-btn.active {
+    color: var(--gold2);
+    border-bottom-color: var(--gold);
+    background: rgba(195,240,0,0.12);
+    font-weight: 700;
+  }
+
+  /* MAIN CONTENT */
+  .main { padding: 20px; max-width: 1100px; margin: 0 auto; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  .section-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ink2);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::before {
+    content: '';
+    display: inline-block;
+    width: 4px; height: 18px;
+    background: var(--gold);
+    border-radius: 2px;
+  }
+
+  /* CARDS */
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink2);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-light);
+    letter-spacing: 1px;
+  }
+
+  /* GRID INPUTS */
+  .input-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .input-group { display: flex; flex-direction: column; gap: 4px; }
+  .input-group label {
+    font-size: 11px;
+    color: var(--ink3);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .input-row input {
+    width: 80px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: #ffffff;
+    font-size: 14px;
+    font-family: 'Noto Sans TC', sans-serif;
+    color: var(--red);
+    font-weight: 700;
+    text-align: center;
+    transition: border-color 0.2s;
+  }
+  .input-row input:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(195,240,0,0.15);
+  }
+  .input-row .unit {
+    font-size: 12px;
+    color: var(--ink3);
+    min-width: 24px;
+  }
+
+  /* RESULT DISPLAY */
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .result-item {
+    background: linear-gradient(135deg, #f7faec, #eaf0d4);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+  }
+  .result-item .label {
+    font-size: 11px;
+    color: var(--ink3);
+    margin-bottom: 3px;
+    letter-spacing: 0.5px;
+  }
+  .result-item .value {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--green);
+    font-family: 'Noto Serif TC', serif;
+  }
+  .result-item .value-sub {
+    font-size: 11px;
+    color: var(--ink3);
+    margin-top: 2px;
+  }
+
+  /* INVENTORY */
+  .inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+  }
+  .inv-card {
+    background: var(--paper);
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    padding: 12px;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+  .inv-card .inv-name {
+    font-size: 12px;
+    color: var(--ink3);
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+  }
+  .inv-card .inv-val {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    font-family: 'Noto Serif TC', serif;
+  }
+  .inv-card .inv-unit { font-size: 11px; color: var(--ink3); }
+  .inv-card input {
+    width: 70px;
+    padding: 4px 6px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--red);
+    text-align: center;
+    background: #ffffff;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  .inv-card input:focus { outline: none; border-color: var(--gold); }
+
+  /* TABLE */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .data-table th {
+    background: var(--ink2);
+    color: var(--gold);
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 700;
+    letter-spacing: 1px;
+    font-size: 12px;
+  }
+  .data-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--ink);
+  }
+  .data-table tr:nth-child(even) td { background: #f7faec; }
+  .data-table tr:hover td { background: #eaf0d4; }
+  .data-table .num { text-align: right; font-weight: 600; color: var(--green); }
+  .data-table th.num { color: var(--gold); }
+  .data-table .red { color: var(--red); font-weight: 700; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: var(--gold);
+    color: var(--ink);
+    box-shadow: 0 2px 6px rgba(195,240,0,0.3);
+  }
+  .btn-primary:hover { background: var(--gold2); transform: translateY(-1px); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+  }
+  .btn-secondary:hover { background: rgba(195,240,0,0.1); }
+
+  .calc-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-light);
+    flex-wrap: wrap;
+  }
+
+  /* NOTICE */
+  .notice {
+    background: linear-gradient(90deg, #f7faec, #f7faec);
+    border-left: 4px solid var(--gold);
+    padding: 10px 14px;
+    border-radius: 0 6px 6px 0;
+    font-size: 12px;
+    color: var(--ink3);
+    margin-bottom: 14px;
+    line-height: 1.6;
+  }
+  .notice strong { color: var(--red); }
+
+  /* STATUS BADGE */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .badge-ok { background: #d4edda; color: #155724; }
+  .badge-low { background: #fff3cd; color: #856404; }
+  .badge-out { background: #f8d7da; color: #721c24; }
+
+  /* TWO COL */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* DAILY CHIPS — horizontal pill layout */
+  .daily-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 4px 0 8px;
+  }
+  .daily-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: linear-gradient(135deg, #f7faec, #eaf0d4);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    min-width: 90px;
+  }
+  .daily-chip .chip-label {
+    font-size: 11px;
+    color: var(--ink3);
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+    white-space: nowrap;
+  }
+  .daily-chip .chip-value {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--green);
+    font-family: 'Noto Serif TC', serif;
+    white-space: nowrap;
+  }
+  .daily-chips-powder .daily-chip {
+    background: linear-gradient(135deg, #e8f5e9, #d4edda);
+    border-color: #a8d5b5;
+  }
+  .daily-chips-powder .daily-chip .chip-value {
+    color: #155724;
+  }
+
+  /* ===== 月份切換器 ===== */
+  .sched-month-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, #f7faec, #eaf0d4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
+    flex-wrap: wrap;
+  }
+  .sched-month-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink2);
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sched-nav-btn {
+    background: var(--ink2);
+    color: var(--gold);
+    border: 1px solid var(--gold);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Noto Sans TC', sans-serif;
+    transition: all 0.2s;
+    min-width: 42px;
+  }
+  .sched-nav-btn:hover {
+    background: var(--ink);
+    color: var(--gold2);
+  }
+  .sched-today-btn {
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Noto Sans TC', sans-serif;
+    letter-spacing: 1px;
+  }
+  .sched-today-btn:hover { opacity: 0.85; }
+
+  /* SEPARATOR */
+  .sep { height: 1px; background: var(--border-light); margin: 16px 0; }
+
+  /* RECIPE TABLE */
+  .recipe-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1.5fr 1.5fr;
+    gap: 8px;
+    background: var(--ink2);
+    color: var(--gold2);
+    padding: 8px 12px;
+    border-radius: 4px 4px 0 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .recipe-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1.5fr 1.5fr;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 13px;
+    align-items: center;
+  }
+  .recipe-row:nth-child(even) { background: #f7faec; }
+  .recipe-row .qty { font-weight: 700; color: var(--red); text-align: center; }
+  .recipe-row .calc-val { color: var(--green); font-weight: 700; text-align: right; }
+
+  .input-number-big {
+    width: 100px;
+    padding: 8px 12px;
+    border: 2px solid var(--gold);
+    border-radius: 6px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--red);
+    text-align: center;
+    background: #ffffff;
+    font-family: 'Noto Serif TC', serif;
+  }
+  .input-number-big:focus { outline: none; box-shadow: 0 0 0 3px rgba(195,240,0,0.2); }
+
+  .convert-tag {
+    font-size: 11px;
+    background: #e8f5e9;
+    color: #2d6a4f;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+
+  /* SUMMARY BANNER */
+  .summary-banner {
+    background: linear-gradient(135deg, var(--ink), var(--ink2));
+    color: var(--gold2);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    border: 1px solid var(--gold);
+  }
+  .summary-item { text-align: center; min-width: 80px; }
+  .summary-item .s-label { font-size: 11px; color: var(--gold); letter-spacing: 1px; }
+  .summary-item .s-val { font-size: 22px; font-weight: 700; font-family: 'Noto Serif TC', serif; }
+  .summary-item .s-unit { font-size: 11px; color: var(--gold); }
+  .summary-divider { width: 1px; background: rgba(195,240,0,0.3); }
+  /* INPUT PAGE TWO-COLUMN LAYOUT */
+  .input-page-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 750px) {
+    .input-page-grid { grid-template-columns: 1fr; }
+  }
+  .input-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .col-header {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--gold2);
+    background: var(--ink2);
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    border-left: 4px solid var(--gold);
+    letter-spacing: 2px;
+  }
+  .input-block {
+    background: var(--paper);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+  }
+  .input-block-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .irow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px dotted var(--border-light);
+  }
+  .irow:last-of-type { border-bottom: none; }
+  .irow label {
+    font-size: 16px;
+    color: var(--ink2);
+    flex: 1;
+    font-weight: 500;
+  }
+  .ifield {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .ifield input {
+    width: 90px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: #ffffff;
+    font-size: 16px;
+    font-family: 'Noto Sans TC', sans-serif;
+    color: var(--red);
+    font-weight: 700;
+    text-align: center;
+    transition: border-color 0.2s;
+  }
+  .ifield input:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(195,240,0,0.15);
+  }
+  .ifield .unit {
+    font-size: 16px;
+    color: var(--ink3);
+    min-width: 20px;
+  }
+  .remark-row {
+    padding: 8px 0 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .remark-row label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 1px;
+  }
+  .remark-textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: #ffffff;
+    font-size: 13px;
+    font-family: 'Noto Sans TC', sans-serif;
+    color: var(--ink2);
+    resize: vertical;
+    line-height: 1.5;
+    transition: border-color 0.2s;
+  }
+  .remark-textarea:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(195,240,0,0.15);
+  }
+  .remark-textarea::placeholder { color: #c8b090; font-size: 12px; }
+
+  /* MONTHLY SCHEDULE */
+  /* ===== 匯入 Excel 區塊 ===== */
+  .sched-import-bar {
+    background: linear-gradient(135deg, #f7faec, #eaf0d4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
+  }
+  .sched-import-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink2);
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+  }
+  .sched-import-hint {
+    font-size: 12px;
+    color: var(--ink3);
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+  .sched-import-hint code {
+    background: #eaf0d4;
+    color: var(--ink2);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+  }
+  .sched-import-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .sched-import-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--ink2);
+    color: var(--gold);
+    border: 1px solid var(--gold);
+    border-radius: 6px;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Noto Sans TC', sans-serif;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+  .sched-import-btn:hover {
+    background: var(--ink);
+    color: var(--gold2);
+  }
+
+  .sched-day {
+    background: var(--paper);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    margin-bottom: 8px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .sched-day.weekend { border-left: 3px solid #b0bec5; background: #fafafa; }
+  .sched-day.friday  { border-left: 4px solid var(--gold); background: #f4faec; }
+  .sched-day-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    user-select: none;
+    flex-wrap: wrap;
+  }
+  .sched-day-header:hover { background: rgba(195,240,0,0.05); }
+  .sched-date-num { font-family: 'Noto Serif TC',serif; font-size: 16px; font-weight: 700; color: var(--ink2); min-width: 36px; }
+  .sched-weekday  { font-size: 13px; color: var(--ink3); }
+  .sched-fri-badge { font-size: 11px; background: var(--gold); color: var(--ink); padding: 1px 8px; border-radius: 10px; font-weight: 700; }
+  .sched-summary  { font-size: 12px; color: var(--green); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sched-toggle-icon { margin-left: auto; color: var(--ink3); font-size: 13px; flex-shrink: 0; }
+  .sched-day-body { padding: 12px 16px; border-top: 1px solid var(--border-light); }
+  .irow-with-remark {
+    display: flex;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px dotted var(--border-light);
+    gap: 8px;
+  }
+  .irow-with-remark:last-of-type { border-bottom: none; }
+  .irow-with-remark label {
+    font-size: 16px;
+    color: var(--ink2);
+    flex: 0 0 auto;
+    font-weight: 500;
+    min-width: 60px;
+  }
+  .irow-remark-input {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 8px;
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    background: #ffffff;
+    font-size: 12px;
+    font-family: 'Noto Sans TC', sans-serif;
+    color: var(--ink2);
+    transition: border-color 0.2s;
+  }
+  .irow-remark-input:focus {
+    outline: none;
+    border-color: var(--gold);
+    border-style: solid;
+    box-shadow: 0 0 0 2px rgba(195,240,0,0.10);
+  }
+  .irow-remark-input::placeholder { color: #c8b090; }
+  .powder-input {
+    width: 72px;
+    padding: 3px 6px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--red);
+    text-align: right;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  .powder-input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 2px rgba(195,240,0,0.15); }
+  .powder-calc { color: var(--green); font-weight: 700; }
+
+  @media (max-width: 600px) {
+    /* 匯入 */
+    .sched-import-bar { padding: 10px 12px; }
+    .sched-import-title { font-size: 13px; }
+    .sched-import-hint { font-size: 11px; }
+    .sched-import-btn { padding: 7px 14px; font-size: 12px; }
+    /* Modal 在手機上全寬 */
+    #clear-confirm-modal > div,
+    #clear-applied-modal > div,
+    #sched-import-modal > div {
+      max-width: 100% !important;
+      max-height: 92vh;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <img src="data:image/webp;base64,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" alt="得來素 DER LIFE" style="height:60px;border-radius:6px;object-fit:contain;">
+  <div>
+    <div class="header-logo">生產排程與成本管理系統</div>
+    <div class="header-sub">DerLife Production & Cost Management</div>
+  </div>
+</div>
+
+<div class="tabs-wrap">
+  <button class="tab-btn active" onclick="showTab('monthly-schedule')" id="tab-btn-monthly">📅 當月每日工作排程表</button>
+  <button class="tab-btn" onclick="showTab('input')">📋 製作數量輸入</button>
+  <button class="tab-btn" onclick="showTab('overview')">📊 各商品製作數量一覽表</button>
+  <button class="tab-btn" onclick="showTab('mushroom')">🌾 乾貨需備總量</button>
+  <button class="tab-btn" onclick="showTab('daily')" id="tab-btn-daily">📝 餛飩、水餃、G腿製作斤兩</button>
+  <button class="tab-btn" onclick="showTab('gleg')" id="tab-btn-gleg" style="display:none">🍗 G腿斤兩一覽表</button>
+  <button class="tab-btn" onclick="showTab('zongzi')" id="tab-btn-zongzi">🎋 粽子斤兩管理</button>
+  <button class="tab-btn" onclick="showTab('oily-rice')" id="tab-btn-oily-rice">🍚 油飯斤兩管理</button>
+  <button class="tab-btn" onclick="showTab('other-products')" id="tab-btn-other-products">🍄 其他商品斤兩</button>
+</div>
+
+<div class="main">
+
+<!-- ===== TAB 1: 製作數量輸入 ===== -->
+<div id="tab-input" class="section">
+  <div class="notice" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <span><strong>紅色數字</strong>為可輸入欄位，輸入後相關計算會自動更新</span>
+    <button style="background:var(--red);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap" onclick="showClearConfirm()">🗑️ 清除資料</button>
+  </div>
+
+  <!-- 主要產品 + 原料庫存 並排 -->
+  <div class="input-page-grid">
+
+    <!-- 左欄：製作數量 -->
+    <div class="input-col">
+      <div class="col-header">本次製作數量</div>
+
+      <div class="input-block">
+        <div class="input-block-title">🥟 餛飩 / 水餃</div>
+        <div class="irow"><label>餛飩（包）</label><div class="ifield"><input type="number" id="q_wonton" value="0" min="0" oninput="recalcAll();saveInputs()"><span class="unit">包</span></div></div>
+        <div class="irow"><label>餛飩料（鍋）</label><div class="ifield"><input type="number" id="q_wonton_fill" value="0" min="0" style="color:#1a1208!important" oninput="recalcAll();saveInputs()"><span class="unit">鍋</span></div></div>
+        <div class="irow"><label>香椿水餃（鍋）</label><div class="ifield"><input type="number" id="q_dumplings_xc" value="0" min="0" oninput="recalcAll();saveInputs()"><span class="unit">鍋</span></div></div>
+        <div class="irow"><label>紅麴水餃（鍋）</label><div class="ifield"><input type="number" id="q_dumplings_hq" value="0" min="0" oninput="recalcAll();saveInputs()"><span class="unit">鍋</span></div></div>
+      </div>
+
+      <div class="input-block">
+        <div class="input-block-title">🔺 三角圓</div>
+        <div class="irow"><label>三角圓（袋）</label><div class="ifield"><span style="font-size:16px;color:var(--gold);font-weight:700;margin-right:6px">需炒 <span id="tri_cook_basins_display" style="color:var(--red);font-size:16px">0</span> 鍋</span><input type="number" id="q_triangle" value="18" min="0" oninput="recalcAll();saveInputs()"><span class="unit">袋</span></div></div>
+      </div>
+
+      <div class="input-block">
+        <div class="input-block-title">🍗 G腿</div>
+        <div class="irow"><label>G腿（鍋）</label><div class="ifield"><input type="number" id="q_gleg" value="11" min="0" oninput="recalcAll();saveInputs()"><span class="unit">鍋</span></div></div>
+        <div class="irow"><label>G腿製作次數</label><div class="ifield"><input type="number" id="q_gleg_times" value="1" min="1" oninput="recalcAll();saveInputs()"><span class="unit">次</span></div></div>
+        <div class="irow"><label>剩餘拌粉量</label><div class="ifield"><input type="number" id="q_gleg_powder_left" value="3" step="0.1" oninput="recalcAll();recalcPowder()"><span class="unit">kg</span></div></div>
+      </div>
+
+      <div class="input-block">
+        <div class="input-block-title">🎋 粽子</div>
+        <div class="irow"><label>得來素粽子（粒）</label><div class="ifield"><input type="number" id="q_zongzi_d" value="0" min="0" oninput="recalcAll();saveInputs()"><span class="unit">粒</span></div></div>
+        <div class="irow"><label>慈濟粽子（粒）</label><div class="ifield"><input type="number" id="q_zongzi_c" value="0" min="0" oninput="recalcAll();saveInputs()"><span class="unit">粒</span></div></div>
+      </div>
+
+      <div class="input-block">
+        <div class="input-block-title">🍚 油飯</div>
+        <div class="irow"><label>油飯（盤）</label><div class="ifield"><input type="number" id="q_oily_rice" value="0" min="0" oninput="recalcAll();saveInputs();zCalcAll()"><span class="unit">盤</span></div></div>
+        <div class="irow"><label>猴菇荷葉油飯（盤）</label><div class="ifield"><input type="number" id="q_monkey_rice" value="0" min="0" oninput="recalcAll();saveInputs();zCalcAll()"><span class="unit">盤</span></div></div>
+      </div>
+
+      <div class="input-block">
+        <div class="input-block-title">🍄 其他</div>
+        <div class="irow"><label>素肉燥（鍋）</label><div class="ifield"><input type="number" id="q_minced" value="0" min="0" oninput="recalcAll();saveInputs()"><span class="unit">鍋</span></div></div>
+        <div class="irow"><label>辣椒醬（鍋）</label><div class="ifield"><input type="number" id="q_minced_chili" value="0" min="0" oninput="recalcAll();saveInputs()"><span class="unit">鍋</span></div></div>
+        <div class="irow"><label>炒香菇頭絲</label><div class="ifield"><input type="number" id="q_mushr_shred" value="0" min="0" oninput="recalcAll();saveInputs();recalcMushrShredApp()"><span class="unit">斤</span></div></div>
+        <div class="irow"><label>咖哩粉（包）</label><div class="ifield"><input type="number" id="q_curry" value="0" min="0" oninput="recalcAll();saveInputs()"><span class="unit">包</span></div></div>
+        <div class="irow"><label>胡椒鹽（份）</label><div class="ifield"><input type="number" id="q_pepper_salt" value="0" min="0" oninput="recalcAll();saveInputs()"><span class="unit">份</span></div></div>
+      </div>
+    </div>
+
+    <!-- 右欄：庫存量 -->
+    <div class="input-col">
+      <div class="col-header">原料庫存量</div>
+
+      <div class="input-block">
+        <div class="input-block-title">🌿 主要原料（斤）</div>
+        <div class="irow"><label>香菇頭</label><div class="ifield"><input type="number" id="inv_mushrHead" value="99" min="0" oninput="recalcAll();saveInputs()"><span class="unit">斤</span></div></div>
+        <div class="irow"><label>碎肉</label><div class="ifield"><input type="number" id="inv_mince" value="24" min="0" oninput="recalcAll();saveInputs()"><span class="unit">斤</span></div></div>
+        <div class="irow"><label>菜脯</label><div class="ifield"><input type="number" id="inv_radish" value="9" min="0" oninput="recalcAll();saveInputs()"><span class="unit">斤</span></div></div>
+        <div class="irow"><label>素膠漿</label><div class="ifield"><input type="number" id="inv_soJiang" value="0" min="0" oninput="recalcAll();saveInputs()"><span class="unit">斤</span></div></div>
+      </div>
+
+      <div class="input-block">
+        <div class="input-block-title">📦 粽子剩料</div>
+        <div class="irow-with-remark">
+          <label>菜脯料</label>
+          <div class="ifield"><input type="text" id="inv_gLegFill" value="23" inputmode="decimal" oninput="var _s=document.getElementById('z-s-caipo-jin');if(_s&&_s!==document.activeElement)_s.value=this.value;recalcAll();saveInputs();zCalcAll()"><span class="unit">斤</span></div>
+          <span style="font-size:12px;color:var(--red);white-space:nowrap;margin-left:6px;font-weight:700">扣除</span><input type="number" id="inv_gLegFill_deduct" value="0" min="0" step="0.1" oninput="recalcAll();saveInputs();zCalcAll()" style="width:64px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:14px;font-weight:700;color:var(--red);text-align:center;background:#ffffff;font-family:'Noto Sans TC',sans-serif;margin-left:2px"><span style="font-size:12px;color:var(--ink3);white-space:nowrap;margin-right:6px">斤</span>
+          <span style="font-size:13px;color:var(--ink3);white-space:nowrap;margin-right:2px">冷凍庫還有</span><input type="text" class="irow-remark-input" id="rmk_gLegFill" placeholder="備註…">
+        </div>
+        <div class="irow-with-remark">
+          <label>乾香菇</label>
+          <div class="ifield"><input type="text" id="inv_mushroom" value="7790" inputmode="decimal" oninput="recalcAll();saveInputs();zCalcAll()"><span class="unit">g</span></div>
+          <span style="font-size:12px;color:var(--red);white-space:nowrap;margin-left:6px;font-weight:700">扣除</span><input type="number" id="inv_mushroom_deduct" value="0" min="0" oninput="recalcAll();saveInputs();zCalcAll()" style="width:64px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:14px;font-weight:700;color:var(--red);text-align:center;background:#ffffff;font-family:'Noto Sans TC',sans-serif;margin-left:2px"><span style="font-size:12px;color:var(--ink3);white-space:nowrap;margin-right:6px">朵</span>
+          <span style="font-size:13px;color:var(--ink3);white-space:nowrap;margin-right:2px">冷凍庫還有</span><input type="text" class="irow-remark-input" id="rmk_mushroom" placeholder="備註…">
+          <span style="font-size:14px;color:var(--ink3);white-space:nowrap;margin-left:4px">≈</span><span id="inv_mushroom_rem_display" style="font-size:16px;font-weight:700;color:var(--green);white-space:nowrap;min-width:48px;text-align:right">—</span><span style="font-size:14px;color:var(--ink3);white-space:nowrap;margin-left:2px">朵</span>
+        </div>
+        <div class="irow-with-remark">
+          <label>紅糟肉片</label>
+          <div class="ifield"><input type="text" id="inv_redMeat" value="13360" inputmode="decimal" oninput="recalcAll();saveInputs();zCalcAll()"><span class="unit">g</span></div>
+          <span style="font-size:12px;color:var(--red);white-space:nowrap;margin-left:6px;font-weight:700">扣除</span><input type="number" id="inv_redMeat_deduct" value="0" min="0" oninput="recalcAll();saveInputs();zCalcAll()" style="width:64px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:14px;font-weight:700;color:var(--red);text-align:center;background:#ffffff;font-family:'Noto Sans TC',sans-serif;margin-left:2px"><span style="font-size:12px;color:var(--ink3);white-space:nowrap;margin-right:6px">片</span>
+          <span style="font-size:13px;color:var(--ink3);white-space:nowrap;margin-right:2px">冷凍庫還有</span><input type="text" class="irow-remark-input" id="rmk_redMeat" placeholder="備註…">
+          <span style="font-size:14px;color:var(--ink3);white-space:nowrap;margin-left:4px">≈</span><span id="inv_redMeat_rem_display" style="font-size:16px;font-weight:700;color:var(--green);white-space:nowrap;min-width:48px;text-align:right">—</span><span style="font-size:14px;color:var(--ink3);white-space:nowrap;margin-left:2px">片</span>
+        </div>
+        <div class="irow-with-remark">
+          <label>乾肉片</label>
+          <div class="ifield"><input type="text" id="inv_whiteMeat" value="9380" inputmode="decimal" oninput="recalcAll();saveInputs();zCalcAll()"><span class="unit">g</span></div>
+          <span style="font-size:12px;color:var(--red);white-space:nowrap;margin-left:6px;font-weight:700">扣除</span><input type="number" id="inv_whiteMeat_deduct" value="0" min="0" oninput="recalcAll();saveInputs();zCalcAll()" style="width:64px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:14px;font-weight:700;color:var(--red);text-align:center;background:#ffffff;font-family:'Noto Sans TC',sans-serif;margin-left:2px"><span style="font-size:12px;color:var(--ink3);white-space:nowrap;margin-right:6px">片</span>
+          <span style="font-size:13px;color:var(--ink3);white-space:nowrap;margin-right:2px">冷凍庫還有</span><input type="text" class="irow-remark-input" id="rmk_whiteMeat" placeholder="備註…">
+          <span style="font-size:14px;color:var(--ink3);white-space:nowrap;margin-left:4px">≈</span><span id="inv_whiteMeat_rem_display" style="font-size:16px;font-weight:700;color:var(--green);white-space:nowrap;min-width:48px;text-align:right">—</span><span style="font-size:14px;color:var(--ink3);white-space:nowrap;margin-left:2px">片</span>
+        </div>
+        <div class="irow-with-remark">
+          <label>乾肉角</label>
+          <div class="ifield"><input type="text" id="inv_corner" value="13920" inputmode="decimal" oninput="recalcAll();saveInputs();zCalcAll()"><span class="unit">g</span></div>
+          <span style="font-size:12px;color:var(--red);white-space:nowrap;margin-left:6px;font-weight:700">扣除</span><input type="number" id="inv_corner_deduct" value="0" min="0" oninput="recalcAll();saveInputs();zCalcAll()" style="width:64px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:14px;font-weight:700;color:var(--red);text-align:center;background:#ffffff;font-family:'Noto Sans TC',sans-serif;margin-left:2px"><span style="font-size:12px;color:var(--ink3);white-space:nowrap;margin-right:6px">個</span>
+          <span style="font-size:13px;color:var(--ink3);white-space:nowrap;margin-right:2px">冷凍庫還有</span><input type="text" class="irow-remark-input" id="rmk_corner" placeholder="備註…">
+          <span style="font-size:14px;color:var(--ink3);white-space:nowrap;margin-left:4px">≈</span><span id="inv_corner_rem_display" style="font-size:16px;font-weight:700;color:var(--green);white-space:nowrap;min-width:48px;text-align:right">—</span><span style="font-size:14px;color:var(--ink3);white-space:nowrap;margin-left:2px">個</span>
+        </div>
+        <div class="irow-with-remark">
+          <label>栗子</label>
+          <div class="ifield"><input type="text" id="inv_chestnut" value="8360" inputmode="decimal" oninput="recalcAll();saveInputs();zCalcAll()"><span class="unit">g</span></div>
+          <span style="font-size:12px;color:var(--red);white-space:nowrap;margin-left:6px;font-weight:700">扣除</span><input type="number" id="inv_chestnut_deduct" value="0" min="0" oninput="recalcAll();saveInputs();zCalcAll()" style="width:64px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:14px;font-weight:700;color:var(--red);text-align:center;background:#ffffff;font-family:'Noto Sans TC',sans-serif;margin-left:2px"><span style="font-size:12px;color:var(--ink3);white-space:nowrap;margin-right:6px">顆</span>
+          <span style="font-size:13px;color:var(--ink3);white-space:nowrap;margin-right:2px">冷凍庫還有</span><input type="text" class="irow-remark-input" id="rmk_chestnut" placeholder="備註…">
+          <span style="font-size:14px;color:var(--ink3);white-space:nowrap;margin-left:4px">≈</span><span id="inv_chestnut_rem_display" style="font-size:16px;font-weight:700;color:var(--green);white-space:nowrap;min-width:48px;text-align:right">—</span><span style="font-size:14px;color:var(--ink3);white-space:nowrap;margin-left:2px">顆</span>
+        </div>
+
+      </div>
+
+      <div class="input-block">
+        <div class="input-block-title">🍚 油飯庫存（兩/斤）</div>
+        <div class="irow-with-remark">
+          <label>飯上料</label><div class="ifield"><input type="number" id="inv_riceTop" value="0" min="0" oninput="recalcAll();saveInputs()"><span class="unit">兩</span></div>
+          <span style="font-size:16px;color:var(--ink3);white-space:nowrap;margin-right:2px">冷凍庫還有</span><input type="text" class="irow-remark-input" id="rmk_riceTop" placeholder="備註…" onchange="saveInputs()">
+        </div>
+        <div class="irow-with-remark">
+          <label>紅糟肉絲</label><div class="ifield"><input type="number" id="inv_redShred" value="0" min="0" oninput="recalcAll();saveInputs()"><span class="unit">兩</span></div>
+          <span style="font-size:16px;color:var(--ink3);white-space:nowrap;margin-right:2px">冷凍庫還有</span><input type="text" class="irow-remark-input" id="rmk_redShred" placeholder="備註…" onchange="saveInputs()">
+        </div>
+        <div class="irow-with-remark">
+          <label>油飯香菇絲</label><div class="ifield"><input type="number" id="inv_riceMushr" value="0" min="0" oninput="recalcAll();saveInputs()"><span class="unit">兩</span></div>
+          <span style="font-size:16px;color:var(--ink3);white-space:nowrap;margin-right:2px">冷凍庫還有</span><input type="text" class="irow-remark-input" id="rmk_riceMushr" placeholder="備註…" onchange="saveInputs()">
+        </div>
+        <div class="irow-with-remark">
+          <label>油飯拌飯醬</label><div class="ifield"><input type="number" id="inv_riceSource" value="0" min="0" oninput="recalcAll();saveInputs()"><span class="unit">斤</span></div>
+          <span style="font-size:16px;color:var(--ink3);white-space:nowrap;margin-right:2px">冷凍庫還有</span><input type="text" class="irow-remark-input" id="rmk_riceSource" placeholder="備註…" onchange="saveInputs()">
+        </div>
+        <div class="irow">
+          <label>油飯拌飯醬加量</label><div class="ifield"><input type="number" id="inv_riceSourceExtra" value="0" min="0" oninput="recalcFryRice();saveInputs()"><span class="unit">斤</span></div>
+        </div>
+      </div>
+
+      <div class="input-block">
+        <div class="input-block-title">🔺 三角圓庫存</div>
+        <div class="irow"><label>剩料（盆）</label><div class="ifield"><input type="number" id="q_tri_left" value="5" min="0" oninput="recalcAll();saveInputs()"><span class="unit">盆</span></div></div>
+        <div class="irow"><label>先炒數量（鍋）</label><div class="ifield"><input type="number" id="q_tri_fry" value="1" min="0" oninput="recalcAll();saveInputs()"><span class="unit">鍋</span></div></div>
+        <div class="irow"><label style="color:var(--gold);font-weight:700">需炒數量（鍋）</label><div class="ifield"><span id="tri_cook_pots_display" style="font-size:16px;font-weight:700;color:var(--red);min-width:40px;text-align:center;display:inline-block">0</span><span class="unit">鍋</span></div></div>
+        <div class="irow"><label>下禮拜先備（鍋）</label><div class="ifield"><input type="number" id="q_tri_next" value="1" min="0" oninput="recalcAll();saveInputs()"><span class="unit">鍋</span></div></div>
+      </div>
+
+      <div class="input-block">
+        <div class="input-block-title">🧊 餛飩料冷凍追蹤</div>
+        <div class="irow"><label>冷凍庫存</label><div class="ifield"><input type="number" id="inv_wonton_frozen" value="54" min="0" oninput="recalcAll();saveInputs()"><span class="unit">包</span></div></div>
+        <div class="irow"><label>下禮拜用量</label><div class="ifield"><input type="number" id="inv_wonton_next" value="0" min="0" oninput="recalcAll();saveInputs()"><span class="unit">包</span></div></div>
+        <div class="irow"><label>下下禮拜用量</label><div class="ifield"><input type="number" id="inv_wonton_next2" value="0" min="0" oninput="recalcAll();saveInputs()"><span class="unit">包</span></div></div>
+        <div id="wonton-stock-result" class="result-grid" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+  </div><!-- end input-page-grid -->
+</div>
+
+<!-- ===== TAB 2: 製作一覽表 ===== -->
+<div id="tab-overview" class="section">
+  <div class="section-title" id="overview-section-title">各商品製作數量一覽表</div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title" id="overview-card-title">各品項數量</div>
+      <table class="data-table">
+        <thead><tr><th>品項</th><th class="num">數量</th><th>單位</th></tr></thead>
+        <tbody id="overview-table"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TAB: 餛飩、水餃、G腿製作斤兩 ===== -->
+<div id="tab-daily" class="section">
+  <div class="section-title">餛飩、水餃、G腿製作斤兩</div>
+
+  <!-- 子頁籤列 -->
+  <div style="background:var(--ink2);display:flex;overflow-x:auto;gap:2px;padding:0 8px;border-bottom:2px solid var(--border);border-radius:8px 8px 0 0;margin-bottom:16px">
+    <button class="tab-btn active" id="dtab-btn-wonton" onclick="dShowPage('dpage-wonton',this)" style="font-size:12px;padding:8px 14px">🥟 餛飩斤兩</button>
+    <button class="tab-btn" id="dtab-btn-dumpling" onclick="dShowPage('dpage-dumpling',this)" style="font-size:12px;padding:8px 14px">🥟 水餃斤兩</button>
+    <button class="tab-btn" id="dtab-btn-gleg" onclick="dShowPage('dpage-gleg',this)" style="font-size:12px;padding:8px 14px">🍗 G腿斤兩</button>
+  </div>
+
+  <!-- === 子頁: 餛飩 === -->
+  <div id="dpage-wonton" class="dpage">
+    <div class="notice">以工作排程表<strong>當日</strong>的餛飩數值為主；當日排程無餛飩則不顯示。若當日排程無資料，則以製作數量輸入為準。</div>
+    <div id="daily-wonton-block">
+      <div class="section-title" style="font-size:15px;margin-top:4px">🥟 餛飩斤兩</div>
+      <div class="card">
+        <div class="card-title">餛飩配方（以42包為基準）</div>
+        <div id="daily-wonton-recipe" class="daily-chips"></div>
+        <!-- 每日用量（依排程餛飩料天數除） -->
+        <div id="daily-wonton-fill-days-notice" style="display:none;margin-top:10px;padding:7px 12px;background:linear-gradient(135deg,#e8f5e9,#d4edda);border:1px solid #a8d5b5;border-radius:6px;font-size:12px;color:#155724;font-weight:700">
+          📅 排程共 <span id="wonton-fill-days-display">0</span> 天有餛飩料，以下為每日用量（總量 ÷ <span id="wonton-fill-days-denom">0</span> 天）
+        </div>
+        <div id="daily-wonton-recipe-perday" class="daily-chips" style="display:none;margin-top:6px"></div>
+        <div class="notice" style="margin-top:12px;margin-bottom:0">
+          素膠漿每 <strong>12包</strong> 用 <strong>10斤</strong>　｜　餛飩芡漿重量（盆）：<span id="wonton-ganjiang-weight" style="color:var(--green);font-weight:700">—</span>
+        </div>
+        <div class="calc-bar">
+          <span style="font-size:13px;color:var(--ink3)">製作包數：</span>
+          <input type="number" id="wonton_servings" class="input-number-big" value="42" min="0" oninput="recalcWonton();recalcDaily()">
+          <span style="font-size:13px;color:var(--ink3)">包</span>
+          <div style="margin-left:auto;font-size:12px;color:var(--ink3)">36包以上分四次做</div>
+        </div>
+      </div>
+    </div>
+    <div id="daily-wonton-empty" style="display:none;text-align:center;padding:40px;color:var(--ink3);font-size:14px">
+      ⚠️ 當日工作排程無餛飩，或製作數量輸入的餛飩為零。
+    </div>
+  </div>
+
+  <!-- === 子頁: 水餃 === -->
+  <div id="dpage-dumpling" class="dpage" style="display:none">
+    <div class="notice">依製作數量輸入頁的數值自動顯示。數量為零的商品不顯示。</div>
+    <div id="daily-dumpling-block">
+      <div class="section-title" style="font-size:15px;margin-top:4px">🥟 水餃斤兩</div>
+      <div class="card">
+        <div class="card-title">水餃配方（以7鍋為基準）</div>
+        <div id="daily-dumpling-recipe" class="daily-chips"></div>
+        <div class="notice" style="margin-top:12px;margin-bottom:0">水餃芡漿重量（盆）：<span id="dumpling-ganjiang-weight" style="color:var(--green);font-weight:700">—</span></div>
+        <div class="calc-bar">
+          <span style="font-size:13px;color:var(--ink3)">製作鍋數：</span>
+          <input type="number" id="dumpling_basins" class="input-number-big" value="7" min="0" oninput="recalcDumpling();recalcDaily()">
+          <span style="font-size:13px;color:var(--ink3)">鍋</span>
+        </div>
+      </div>
+    </div>
+    <div id="daily-dumpling-empty" style="display:none;text-align:center;padding:40px;color:var(--ink3);font-size:14px">
+      ⚠️ 水餃製作數量為零，請先至「製作數量輸入」頁填寫數量。
+    </div>
+  </div>
+
+  <!-- === 子頁: G腿 === -->
+  <div id="dpage-gleg" class="dpage" style="display:none">
+    <div class="notice">以工作排程表<strong>當日</strong>的G腿數值為主；當日排程無G腿則不顯示。若當日排程無資料，則以製作數量輸入為準。</div>
+
+    <!-- G腿內層子子頁籤列 -->
+    <div style="background:var(--ink2);display:flex;overflow-x:auto;gap:2px;padding:0 8px;border-bottom:2px solid var(--border);border-radius:8px 8px 0 0;margin-bottom:16px">
+      <button class="tab-btn active" id="gleg-inner-btn-make" onclick="glegInnerShow('gleg-inner-make',this)" style="font-size:12px;padding:8px 14px">🍗 G腿用粉 ＆ 醬調味料</button>
+      <button class="tab-btn" id="gleg-inner-btn-table" onclick="glegInnerShow('gleg-inner-table',this)" style="font-size:12px;padding:8px 14px">📋 G腿斤兩一覽表</button>
+      <button class="tab-btn" id="gleg-inner-btn-sauce-manual" onclick="glegInnerShow('gleg-inner-sauce-manual',this)" style="font-size:12px;padding:8px 14px">🧪 手動計算醬料</button>
+    </div>
+
+    <!-- === G腿子子頁: 用粉 & 醬調味料 === -->
+    <div id="gleg-inner-make">
+      <div id="daily-gleg-block">
+        <div class="card">
+          <div class="card-title">本次G腿沾粉、粉漿用量 <span id="gleg-sched-badge" style="font-size:11px;color:var(--green);font-weight:400;margin-left:8px"></span></div>
+          <div>
+            <div id="daily-powder-chips" class="daily-chips daily-chips-powder"></div>
+            <div class="notice" style="margin-top:8px;margin-bottom:0;font-size:11px">
+              沾粉 = 製作鍋數 ÷ 製作次數 × 1鍋沾粉　／　粉漿 = 製作鍋數 ÷ 製作次數 × 1鍋粉漿 − 剩餘粉斤兩<br>
+              <strong>打漿水（kg）</strong> = 1鍋粉漿總重 × 鍋數 ÷ 製作次數 × 1.6 ÷ 1000　／　<strong>黏皮粉（斤）</strong> = 幾鍋粉漿 ÷ 製作次數 × 1.5
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- G腿醬調味料：始終顯示，不受當日排程控制 -->
+      <div class="card" style="margin-top:12px">
+        <div class="card-title">🍶 G腿醬調味料（以1鍋為基準）
+          <span id="gleg-sauce-source-badge" style="font-size:11px;font-weight:400;margin-left:8px;color:var(--green)"></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px;padding:12px;background:linear-gradient(135deg,#f7faec,#eaf0d4);border-radius:6px;border:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <label style="font-size:13px;color:var(--ink2);font-weight:700">製作鍋數：</label>
+            <input type="number" id="sauce_pots" class="input-number-big" value="11" min="1" oninput="recalcGlegSauce()">
+            <span style="font-size:13px;color:var(--ink3)">鍋</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <label style="font-size:13px;color:var(--ink2);font-weight:700">製作次數：</label>
+            <input type="number" id="sauce_times" class="input-number-big" value="1" min="1" oninput="recalcGlegSauce()">
+            <span style="font-size:13px;color:var(--ink3)">次</span>
+          </div>
+          <span style="font-size:12px;color:var(--ink3)">← 自動帶入製作數量輸入頁的G腿數值；也可手動修改</span>
+        </div>
+        <div id="gleg-sauce-recipe" class="daily-chips"></div>
+        <div class="notice" style="margin-top:12px;margin-bottom:4px">
+          ※ G腿醬每盆重 <strong id="gleg-sauce-per-basin">—</strong>，備料時請依此計算盆數
+        </div>
+      </div>
+
+      <div id="daily-gleg-empty" style="display:none;text-align:center;padding:20px;color:var(--ink3);font-size:13px;background:linear-gradient(135deg,#fff3e0,#fffde7);border:1px solid var(--gold);border-radius:6px;margin-top:12px">
+        ℹ️ 當日工作排程無G腿，沾粉粉漿不顯示。G腿醬調味料已依製作數量輸入頁的G腿鍋數計算，請見上方。
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-title">不夠粉配比（依麵粉計算其他用量）</div>
+        <div class="notice" style="margin-bottom:12px">輸入實際可用的麵粉量，其他粉類依原始比例（麵粉21：玉米粉7：脆酥粉1：酥脆粉0.5）自動換算</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+          <label style="font-size:13px;color:var(--ink2);font-weight:700">麵粉量（kg）：</label>
+          <input type="number" id="shortage_flour" class="input-number-big" style="width:120px;font-size:16px" step="0.1" oninput="recalcShortage()">
+          <span style="font-size:13px;color:var(--ink3)">kg</span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="data-table" id="shortage-table">
+            <thead><tr>
+              <th>粉類</th>
+              <th class="num">用量（g）</th>
+              <th class="num">換算（斤兩）</th>
+            </tr></thead>
+            <tbody>
+              <tr><td>麵粉</td><td class="num" id="sh_flour">—</td><td class="num" id="sh_flour_jin">—</td></tr>
+              <tr><td>玉米粉</td><td class="num" id="sh_corn">—</td><td class="num" id="sh_corn_jin">—</td></tr>
+              <tr><td>脆酥粉</td><td class="num" id="sh_crisp">—</td><td class="num" id="sh_crisp_jin">—</td></tr>
+              <tr><td>酥脆粉</td><td class="num" id="sh_crisp2">—</td><td class="num" id="sh_crisp2_jin">—</td></tr>
+              <tr style="background:#e8f5e9"><td><strong>合計</strong></td><td class="num" id="sh_total">—</td><td class="num" id="sh_total_jin">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- === G腿子子頁: 斤兩一覽表 === -->
+    <div id="gleg-inner-table" style="display:none">
+      <div class="card">
+        <div class="card-title">G腿配方</div>
+        <div class="recipe-header" style="grid-template-columns:2fr 1fr 1fr 1.5fr 2fr">
+          <div>食材</div><div style="text-align:center">1鍋基準</div><div style="text-align:center">單位</div><div style="text-align:right">本次需求</div><div style="text-align:center">調味料(斤) / 單位 / 換算</div>
+        </div>
+        <div id="gleg-recipe"></div>
+
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border-light)">
+          <div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:8px;letter-spacing:1px">本次G腿沾粉、粉漿用量</div>
+          <div style="overflow-x:auto">
+            <table class="data-table">
+              <thead><tr>
+                <th>粉類</th>
+                <th class="num">總重（g）</th>
+                <th class="num">麵粉（kg）</th>
+                <th class="num">玉米粉（kg）</th>
+                <th class="num">脆酥粉（g）</th>
+                <th class="num">酥脆粉（g）</th>
+              </tr></thead>
+              <tbody>
+                <tr><td>沾粉</td>
+                  <td class="num powder-calc" id="this_coat_total"></td>
+                  <td class="num powder-calc" id="this_coat_flour"></td>
+                  <td class="num powder-calc" id="this_coat_corn"></td>
+                  <td class="num powder-calc" id="this_coat_crisp"></td>
+                  <td class="num powder-calc" id="this_coat_crisp2"></td>
+                </tr>
+                <tr><td>粉漿</td>
+                  <td class="num powder-calc" id="this_batt_total"></td>
+                  <td class="num powder-calc" id="this_batt_flour"></td>
+                  <td class="num powder-calc" id="this_batt_corn"></td>
+                  <td class="num powder-calc" id="this_batt_crisp"></td>
+                  <td class="num powder-calc" id="this_batt_crisp2"></td>
+                </tr>
+                <tr style="background:#e8f5e9"><td><strong>打漿水</strong></td>
+                  <td class="num powder-calc" id="this_slurry_water" colspan="4" style="color:var(--green);font-weight:700"></td>
+                  <td></td>
+                </tr>
+                <tr style="background:#e8f5e9"><td><strong>黏皮粉</strong></td>
+                  <td class="num powder-calc" id="this_sticky_powder" colspan="4" style="color:var(--green);font-weight:700"></td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="notice" style="margin-top:8px;margin-bottom:0;font-size:11px">
+            沾粉 = 製作鍋數 ÷ 製作次數 × 1鍋沾粉　／　粉漿 = 製作鍋數 ÷ 製作次數 × 1鍋粉漿 − 剩餘粉斤兩<br>
+            <strong>打漿水（kg）</strong> = 幾鍋粉漿 ÷ 製作次數 × 1.6　／　<strong>黏皮粉（斤）</strong> = 幾鍋粉漿 ÷ 製作次數 × 1.5
+          </div>
+        </div>
+
+        <div class="calc-bar">
+          <span style="font-size:13px;color:var(--ink3)">製作鍋數：</span>
+          <input type="number" id="gleg_pots" class="input-number-big" value="11" min="0" oninput="recalcGleg()">
+          <span style="font-size:13px;color:var(--ink3)">鍋</span>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-title">沾粉 / 粉漿用量參考</div>
+        <div style="overflow-x:auto">
+          <table class="data-table" id="powder-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th class="num">總重（g）</th>
+                <th class="num">麵粉（g）</th>
+                <th class="num">玉米粉（g）</th>
+                <th class="num">脆酥粉（g）</th>
+                <th class="num">酥脆粉（g）</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>原始斤兩</td><td class="num">29,500</td><td class="num">21,000</td><td class="num">7,000</td><td class="num">1,000</td><td class="num">500</td></tr>
+              <tr>
+                <td>新12鍋沾粉</td>
+                <td class="num"><input type="number" class="powder-input" id="coat_total" value="36000" oninput="recalcPowder()"></td>
+                <td class="num powder-calc" id="coat_flour"></td>
+                <td class="num powder-calc" id="coat_corn"></td>
+                <td class="num powder-calc" id="coat_crisp"></td>
+                <td class="num powder-calc" id="coat_crisp2"></td>
+              </tr>
+              <tr>
+                <td>1鍋沾粉</td>
+                <td class="num powder-calc" id="r_coat_total"></td>
+                <td class="num powder-calc" id="r_coat_flour"></td>
+                <td class="num powder-calc" id="r_coat_corn"></td>
+                <td class="num powder-calc" id="r_coat_crisp"></td>
+                <td class="num powder-calc" id="r_coat_crisp2"></td>
+              </tr>
+              <tr>
+                <td>新12鍋漿粉</td>
+                <td class="num"><input type="number" class="powder-input" id="batt_total" value="20000" oninput="recalcPowder()"></td>
+                <td class="num powder-calc" id="batt_flour"></td>
+                <td class="num powder-calc" id="batt_corn"></td>
+                <td class="num powder-calc" id="batt_crisp"></td>
+                <td class="num powder-calc" id="batt_crisp2"></td>
+              </tr>
+              <tr>
+                <td>1鍋粉漿</td>
+                <td class="num powder-calc" id="r_batt_total"></td>
+                <td class="num powder-calc" id="r_batt_flour"></td>
+                <td class="num powder-calc" id="r_batt_corn"></td>
+                <td class="num powder-calc" id="r_batt_crisp"></td>
+                <td class="num powder-calc" id="r_batt_crisp2"></td>
+              </tr>
+              <tr>
+                <td>剩餘粉斤兩</td>
+                <td class="num powder-calc" id="remain_total"></td>
+                <td class="num powder-calc" id="remain_flour"></td>
+                <td class="num powder-calc" id="remain_corn"></td>
+                <td class="num powder-calc" id="remain_crisp"></td>
+                <td class="num powder-calc" id="remain_crisp2"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="notice" style="margin-top:12px;margin-bottom:0">粉的斤兩常常會因為製作方式的不同而變動</div>
+      </div>
+
+    </div><!-- end gleg-inner-table -->
+
+    <!-- === G腿子子頁: 手動計算醬料 === -->
+    <div id="gleg-inner-sauce-manual" style="display:none">
+      <div class="notice">手動輸入鍋數及製作次數，獨立計算G腿醬調味料，不受排程或製作數量輸入頁影響。</div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-title">🧪 手動計算 G腿醬調味料</div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px;padding:12px;background:linear-gradient(135deg,#e8f5e9,#d4edda);border-radius:6px;border:1px solid #a8d5b5">
+          <div style="display:flex;align-items:center;gap:8px">
+            <label style="font-size:13px;color:var(--ink2);font-weight:700">製作鍋數：</label>
+            <input type="number" id="manual_sauce_pots" class="input-number-big" value="1" min="1" oninput="recalcManualSauce()">
+            <span style="font-size:13px;color:var(--ink3)">鍋</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <label style="font-size:13px;color:var(--ink2);font-weight:700">製作次數：</label>
+            <input type="number" id="manual_sauce_times" class="input-number-big" value="1" min="1" oninput="recalcManualSauce()">
+            <span style="font-size:13px;color:var(--ink3)">次</span>
+          </div>
+        </div>
+        <div id="manual-gleg-sauce-recipe" class="daily-chips"></div>
+        <div class="notice" style="margin-top:12px;margin-bottom:4px">
+          ※ G腿醬每盆重 <strong id="manual-gleg-sauce-per-basin">—</strong>，備料時請依此計算盆數
+        </div>
+      </div>
+    </div><!-- end gleg-inner-sauce-manual -->
+
+  </div><!-- end dpage-gleg -->
+
+  <!-- 空白提示 -->
+  <div id="daily-empty" style="display:none;text-align:center;padding:40px;color:var(--ink3);font-size:14px">
+    ⚠️ 目前各商品製作數量均為零，請先至「製作數量輸入」頁填寫數量。
+  </div>
+</div>
+
+<!-- ===== TAB 4: G腿（已移入餛飩水餃G腿頁籤的G腿子頁，此處保留空殼以免 showTab/setTabVisible 出錯） ===== -->
+<div id="tab-gleg" class="section" style="display:none!important">
+</div>
+
+<!-- ===== TAB 5: 粽子 ===== -->
+<div id="tab-zongzi" class="section">
+  <div class="section-title">🎋 粽子斤兩管理</div>
+  <div style="background:var(--ink2);display:flex;overflow-x:auto;gap:2px;padding:0 8px;border-bottom:2px solid var(--border);border-radius:8px 8px 0 0;margin-bottom:16px">
+    <button class="tab-btn active" id="ztab-btn-cur" onclick="zShowPage('zpage-cur',this)" style="font-size:12px;padding:8px 14px">📋 粽子當天製作斤兩及乾貨調味</button>
+    <button class="tab-btn" id="ztab-btn-demand" onclick="zShowPage('zpage-demand',this)" style="font-size:12px;padding:8px 14px">📦 食材需求量</button>
+    <button class="tab-btn" id="ztab-btn-stock" onclick="zShowPage('zpage-stock',this)" style="font-size:12px;padding:8px 14px">🗄️ 配料庫存</button>
+    <button class="tab-btn" id="ztab-btn-seasoning" onclick="zShowPage('zpage-seasoning',this)" style="font-size:12px;padding:8px 14px">🧂 粽子原始調味料斤兩</button>
+  </div>
+
+  <!-- === 子頁 1: 食材需求量 === -->
+  <div id="zpage-demand" class="zpage" style="display:none">
+    <div class="card">
+      <div class="card-title">🏭 生產數量設定</div>
+      <div class="input-grid">
+        <div class="input-group"><label>慈濟訂購量（個）<span style="font-size:10px;color:var(--gold);margin-left:4px">↑ 依製作數量輸入</span></label><div class="input-row"><input type="number" id="z_ciji" value="0" min="0" oninput="zCalcAll()"> <span class="unit">個</span></div></div>
+        <div class="input-group"><label>得來素製作量（個）<span style="font-size:10px;color:var(--gold);margin-left:4px">↑ 依製作數量輸入</span></label><div class="input-row"><input type="number" id="z_dlsu" value="0" min="0" oninput="zCalcAll()"> <span class="unit">個</span></div></div>
+        <div class="input-group"><label>慈濟粽子拌飯重（g）</label><div class="input-row"><input type="number" id="z-ciji-rice" value="150" oninput="zCalcAll()"> <span class="unit">g</span></div></div>
+        <div class="input-group"><label>得來素粽子拌飯重（g）</label><div class="input-row"><input type="number" id="z-dlsu-rice" value="180" oninput="zCalcAll()"> <span class="unit">g</span></div></div>
+      </div>
+      <div id="z-total-info" class="notice" style="margin-top:13px;margin-bottom:0"></div>
+    </div>
+
+    <!-- 乾肉角 + 乾香菇 -->
+    <div class="card" style="margin-top:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="border:2px solid var(--border-light);border-radius:8px;padding:14px">
+          <div class="card-title" style="border:none;padding:0;margin-bottom:10px">🥩 乾肉角</div>
+          <div style="display:flex;gap:6px;align-items:flex-end;margin-bottom:8px"><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">未處理單顆重（g）</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-da-wt" value="2.4" step="0.1" min="0" oninput="zCalcAll()" style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#ffffff;color:var(--red);font-family:Noto Sans TC,sans-serif"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">油炸後重量（g）</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-da-fried-wt" value="4.3" step="0.1" min="0" oninput="zCalcAll()" style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#ffffff;color:var(--red);font-family:Noto Sans TC,sans-serif"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">剩餘量（個）← 庫存</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-da-rem" value="0" readonly style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#eef7f0;color:var(--green)"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">扣除量（個）</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-da-deduct" value="0" min="0" oninput="zCalcAll()" style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#ffffff;color:var(--red);font-family:Noto Sans TC,sans-serif"></div></div></div>
+          <div id="z-da-result" style="margin-top:10px"></div>
+        </div>
+        <div style="border:2px solid var(--border-light);border-radius:8px;padding:14px">
+          <div class="card-title" style="border:none;padding:0;margin-bottom:10px">🍄 乾香菇 <span style="font-size:11px;color:var(--ink3);font-weight:400">需求量（<span style="color:var(--red)">粽子+油飯</span>及荷葉猴菇油飯）</span></div>
+          <div style="display:flex;gap:6px;align-items:flex-end;margin-bottom:8px"><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">未處理單朵重（g）</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-dm-wt" value="1.7" step="0.1" min="0" oninput="zCalcAll()" style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#ffffff;color:var(--red);font-family:Noto Sans TC,sans-serif"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">油炸後重量（g）</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-dm-fried-wt" value="5" step="0.1" min="0" oninput="zCalcAll()" style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#ffffff;color:var(--red);font-family:Noto Sans TC,sans-serif"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">剩餘量（朵）← 庫存</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-dm-rem" value="0" readonly style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#eef7f0;color:var(--green)"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">扣除量（朵）</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-dm-deduct" value="0" min="0" oninput="zCalcAll()" style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#ffffff;color:var(--red);font-family:Noto Sans TC,sans-serif"></div></div></div>
+          <div id="z-dm-result" style="margin-top:10px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 乾肉片 + 紅糟肉 -->
+    <div class="card" style="margin-top:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="border:2px solid var(--border-light);border-radius:8px;padding:14px">
+          <div class="card-title" style="border:none;padding:0;margin-bottom:10px">🥩 乾肉片</div>
+          <div style="display:flex;gap:6px;align-items:flex-end;margin-bottom:8px"><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">未處理單片重（g）</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-dp-wt" value="2.4" step="0.1" min="0" oninput="zCalcAll()" style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#ffffff;color:var(--red);font-family:Noto Sans TC,sans-serif"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">油炸後重量（g）</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-dp-fried-wt" value="4" step="0.1" min="0" oninput="zCalcAll()" style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#ffffff;color:var(--red);font-family:Noto Sans TC,sans-serif"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">剩餘量（片）← 庫存</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-dp-rem" value="0" readonly style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#eef7f0;color:var(--green)"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">扣除量（片）</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-dp-deduct" value="0" min="0" oninput="zCalcAll()" style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#ffffff;color:var(--red);font-family:Noto Sans TC,sans-serif"></div></div></div>
+          <div id="z-dp-result" style="margin-top:10px"></div>
+        </div>
+        <div style="border:2px solid var(--border-light);border-radius:8px;padding:14px">
+          <div class="card-title" style="border:none;padding:0;margin-bottom:10px">🥩 紅糟肉（濕）</div>
+          <div style="display:flex;gap:6px;align-items:flex-end;margin-bottom:8px"><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">未處理單片重（g）</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-dr-wt" value="3.8" step="0.1" min="0" oninput="zCalcAll()" style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#ffffff;color:var(--red);font-family:Noto Sans TC,sans-serif"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">油炸後重量（g）</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-dr-fried-wt" value="4.6" step="0.1" min="0" oninput="zCalcAll()" style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#ffffff;color:var(--red);font-family:Noto Sans TC,sans-serif"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">剩餘量（片）← 庫存</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-dr-rem" value="0" readonly style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#eef7f0;color:var(--green)"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">扣除量（片）</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-dr-deduct" value="0" min="0" oninput="zCalcAll()" style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#ffffff;color:var(--red);font-family:Noto Sans TC,sans-serif"></div></div></div>
+          <div id="z-dr-result" style="margin-top:10px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 栗子 -->
+    <div class="card" style="margin-top:12px;max-width:50%">
+      <div class="card-title">🌰 栗子 <span style="font-size:11px;color:var(--ink3);font-weight:400">需求量（<span style="color:var(--red)">粽子+油飯</span>）</span></div>
+      <div style="display:flex;gap:6px;align-items:flex-end;margin-bottom:8px"><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">未處理單顆重（g）</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-dc-wt" value="7.692" step="0.001" min="0" oninput="zCalcAll()" style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#ffffff;color:var(--red);font-family:Noto Sans TC,sans-serif"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">炸後單顆重（g）</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-dc-fried-wt" value="6" step="0.1" min="0" oninput="(function(v){var t=document.getElementById('z-s-chest-fried-wt');if(t&&t!==document.activeElement)t.value=v;zCalcAll();})(this.value)" style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#ffffff;color:var(--red);font-family:Noto Sans TC,sans-serif" title="炸後單顆重，與配料庫存頁雙向同步"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">剩餘量（顆）← 庫存</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-dc-rem" value="0" readonly style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#eef7f0;color:var(--green)"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0"><span style="font-size:10px;color:var(--ink3);text-align:center;white-space:nowrap">扣除量（顆）</span><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><input type="number" id="z-dc-deduct" value="0" min="0" oninput="zCalcAll()" style="width:64px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#ffffff;color:var(--red);font-family:Noto Sans TC,sans-serif"></div></div></div>
+      <div class="notice" style="margin-top:10px">⚠️ 栗子每次重量不同，建議每次重新秤過。1包1kg約130粒。<br>油飯用量：油飯盤數×30×4 = <span id="z-dc-oily-count" style="color:var(--red);font-weight:700">0</span> 粒</div>
+      <div id="z-dc-result" style="margin-top:10px"></div>
+    </div>
+
+  </div>
+
+  <!-- === 子頁 2: 配料庫存 === -->
+  <div id="zpage-stock" class="zpage" style="display:none">
+    <div class="card">
+      <div class="card-title">🗄️ 配料庫存登錄</div>
+      <p class="notice">輸入目前庫存重量，系統自動換算數量並同步至食材需求量。</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:14px">
+
+        <div style="background:var(--paper);border:1.5px solid var(--border-light);border-radius:8px;padding:13px">
+          <div class="card-title" style="margin-bottom:10px;font-size:13px">🥩 乾肉角</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:12px"><span style="color:var(--ink3)">炸過（g）</span><input type="number" id="z-s-jiao-fried" value="0" oninput="zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border-light)"><span style="color:var(--ink3)">乾的（g）</span><input type="number" id="z-s-jiao-dry" value="0" oninput="zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border-light)"><span style="color:var(--ink3)">扣除量（個）</span><input type="number" id="z-s-jiao-deduct" value="0" min="0" oninput="zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border-light)"><span style="color:var(--ink3)">剩餘量（粽子剩料，g）</span><span id="z-s-jiao-rem-g" style="font-size:13px;font-weight:700;color:var(--green)">0</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px"><span style="color:var(--ink3)">剩餘量換算（粽子剩料÷炸過−扣除）</span><span id="z-s-jiao-rem-conv" style="font-size:13px;font-weight:700;color:var(--green)">—</span></div>
+        </div>
+
+        <div style="background:var(--paper);border:1.5px solid var(--border-light);border-radius:8px;padding:13px">
+          <div class="card-title" style="margin-bottom:10px;font-size:13px">🥩 乾肉片</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:12px"><span style="color:var(--ink3)">炸過（g）</span><input type="number" id="z-s-pian-fried" value="0" oninput="zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border-light)"><span style="color:var(--ink3)">乾的（g）</span><input type="number" id="z-s-pian-dry" value="0" oninput="zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border-light)"><span style="color:var(--ink3)">扣除量（片）</span><input type="number" id="z-s-pian-deduct" value="0" min="0" oninput="zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border-light)"><span style="color:var(--ink3)">剩餘量（粽子剩料，g）</span><span id="z-s-pian-rem-g" style="font-size:13px;font-weight:700;color:var(--green)">0</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px"><span style="color:var(--ink3)">剩餘量換算（粽子剩料÷炸過−扣除）</span><span id="z-s-pian-rem-conv" style="font-size:13px;font-weight:700;color:var(--green)">—</span></div>
+        </div>
+
+        <div style="background:var(--paper);border:1.5px solid var(--border-light);border-radius:8px;padding:13px">
+          <div class="card-title" style="margin-bottom:10px;font-size:13px">🍄 乾香菇</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:12px"><span style="color:var(--ink3)">炸過（g）</span><input type="number" id="z-s-mush-fried" value="0" oninput="zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border-light)"><span style="color:var(--ink3)">乾的（g）</span><input type="number" id="z-s-mush-dry" value="0" oninput="zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border-light)"><span style="color:var(--ink3)">扣除量（朵）</span><input type="number" id="z-s-mush-deduct" value="0" min="0" oninput="zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border-light)"><span style="color:var(--ink3)">剩餘量（粽子剩料，g）</span><span id="z-s-mush-rem-g" style="font-size:13px;font-weight:700;color:var(--green)">0</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px"><span style="color:var(--ink3)">剩餘量換算（粽子剩料÷炸過−扣除）</span><span id="z-s-mush-rem-conv" style="font-size:13px;font-weight:700;color:var(--green)">—</span></div>
+        </div>
+
+        <div style="background:var(--paper);border:1.5px solid var(--border-light);border-radius:8px;padding:13px">
+          <div class="card-title" style="margin-bottom:10px;font-size:13px">🥩 紅糟肉片（泡好切半）</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:12px"><span style="color:var(--ink3)">乾的（g）</span><input type="number" id="z-s-red-dry" value="0" oninput="zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:12px"><span style="color:var(--ink3)">濕的（g）</span><input type="number" id="z-s-red-wet" value="0" oninput="zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:12px"><span style="color:var(--ink3)">炸的（g）</span><input type="number" id="z-s-red-fried" value="0" oninput="zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border-light)"><span style="color:var(--ink3)">扣除量（片）</span><input type="number" id="z-s-red-deduct" value="0" min="0" oninput="zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border-light)"><span style="color:var(--ink3)">剩餘量（粽子剩料，g）</span><span id="z-s-red-rem-g" style="font-size:13px;font-weight:700;color:var(--green)">0</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px"><span style="color:var(--ink3)">剩餘量換算（粽子剩料÷炸後重−扣除）</span><span id="z-s-red-rem-conv" style="font-size:13px;font-weight:700;color:var(--green)">—</span></div>
+        </div>
+
+        <div style="background:var(--paper);border:1.5px solid var(--border-light);border-radius:8px;padding:13px">
+          <div class="card-title" style="margin-bottom:10px;font-size:13px">&#x1F330; 栗子</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:12px"><span style="color:var(--ink3)">剩餘量（g）</span><input type="number" id="z-s-chest-g" value="0" oninput="zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:12px"><span style="color:var(--ink3)">未處理單顆重（g）</span><input type="number" id="z-s-chest-wt" value="7.692" step="0.001" oninput="zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:12px">
+            <span style="color:var(--ink3)">炸後單顆重（g）<span style="color:var(--gold);font-size:10px"> ↑換算顆數用</span></span>
+            <input type="number" id="z-s-chest-fried-wt" value="6" step="0.1" min="0" oninput="var t=document.getElementById('z-dc-fried-wt');if(t)t.value=this.value;zCalcAll();" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700">
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:12px"><span style="color:var(--ink3)">扣除量（顆）</span><input type="number" id="z-s-chest-deduct" value="0" min="0" oninput="zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px">
+            <span style="color:var(--ink3)">剩餘量換算（顆）<span style="font-size:10px;color:var(--ink3)">＝粽子剩料÷炸後重−扣除</span></span>
+            <span id="z-s-chest-result" style="font-size:13px;font-weight:700;color:var(--green)">—</span>
+          </div>
+          <div style="font-size:10px;color:var(--ink3);margin-top:4px">⚠️ 栗子每次重量不同，建議每次重新秤過。1包1kg約130粒。</div>
+        </div>
+
+        <div style="background:var(--paper);border:1.5px solid var(--border-light);border-radius:8px;padding:13px">
+          <div class="card-title" style="margin-bottom:10px;font-size:13px">🧅 菜脯料</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:12px"><span style="color:var(--ink3)">剩餘量（斤）</span><input type="number" id="z-s-caipo-jin" value="0" step="0.1" oninput="var _g=document.getElementById('inv_gLegFill');if(_g&&_g!==document.activeElement)_g.value=this.value;saveInputs();zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:12px"><span style="color:var(--ink3)">扣除量（斤）</span><input type="number" id="z-s-caipo-deduct" value="0" min="0" step="0.1" oninput="zCalcAll()" style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;background:#ffffff;color:var(--red);font-weight:700"></div>
+          <div id="z-s-caipo-result" style="margin-top:8px;font-size:12px;color:var(--green);font-weight:600;line-height:1.6;border-top:1px solid var(--border-light);padding-top:6px"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- === 子頁: 粽子原始調味料斤兩 === -->
+  <div id="zpage-seasoning" class="zpage" style="display:none">
+
+    <div class="card">
+      <div class="card-title">⚙️ 製作盤數（依粽子總數自動計算）</div>
+      <div class="input-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">
+        <div class="input-group"><label>粽子總數（個）</label><div class="input-row"><input type="number" id="z-sea-total" value="12800" oninput="zCalcAll()"></div></div>
+        <div class="input-group"><label>製作盤數（自動）</label><div class="input-row"><input type="number" id="z-sea-pan" readonly style="background:#eef7f0;color:var(--green);font-weight:700"></div></div>
+      </div>
+      <div class="notice" style="margin-top:10px">48盤 = 1車（6200個）。香椿醬：1鍋；香菇頭料：2鍋；菜脯料：3鍋；拌飯醬：2鍋（以48盤為基準）。</div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="card-title">🌿 香椿醬</div>
+      <table class="data-table"><thead><tr><th>品名</th><th class="num">原始（兩/48盤）</th><th class="num">原始斤兩</th></tr></thead><tbody id="z-sea-xiangchun-tbody"></tbody></table>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="card-title">🍄 香菇頭料</div>
+      <table class="data-table"><thead><tr><th>品名</th><th class="num">原始（兩/48盤）</th><th class="num">原始斤兩</th></tr></thead><tbody id="z-sea-mushroom-tbody"></tbody></table>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="card-title">🧅 菜脯料</div>
+      <table class="data-table"><thead><tr><th>品名</th><th class="num">原始（兩/48盤）</th><th class="num">原始斤兩</th></tr></thead><tbody id="z-sea-caipo-tbody"></tbody></table>
+      <div class="notice" style="margin-top:10px">如果有做慈濟菜脯料會包比較多，三分之一鍋左右（2300粒菜脯料多20斤）。</div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="card-title">🥄 拌飯醬</div>
+      <table class="data-table"><thead><tr><th>品名</th><th class="num">原始（兩/48盤）</th><th class="num">原始斤兩</th></tr></thead><tbody id="z-sea-banfan-tbody"></tbody></table>
+      <div class="notice" style="margin-top:10px">拌飯醬的桶數是以2桶倍數平均份量計算。</div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="card-title">🥩 乾肉角調味</div>
+      <div class="input-grid" style="margin-bottom:12px">
+        <div class="input-group"><label>實際乾肉角量（g）← 來自配料庫存</label><div class="input-row"><input type="number" id="z-sea-jiao-g" value="0" readonly style="background:#eef7f0;color:var(--green);font-weight:700"></div></div>
+      </div>
+      <table class="data-table"><thead><tr><th>品名</th><th class="num">基準量（兩/6600g）</th><th class="num">基準斤兩</th><th class="num">本次用量</th></tr></thead><tbody id="z-sea-jiao-tbody"></tbody></table>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="card-title">🥩 乾肉片調味</div>
+      <div class="input-grid" style="margin-bottom:12px">
+        <div class="input-group"><label>實際乾肉片量（g）← 來自配料庫存</label><div class="input-row"><input type="number" id="z-sea-pian-g" value="0" readonly style="background:#eef7f0;color:var(--green);font-weight:700"></div></div>
+      </div>
+      <table class="data-table"><thead><tr><th>品名</th><th class="num">基準量（兩/6750g）</th><th class="num">基準斤兩</th><th class="num">本次用量</th></tr></thead><tbody id="z-sea-pian-tbody"></tbody></table>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="card-title">🥩 紅糟肉（濕）調味</div>
+      <div class="input-grid" style="margin-bottom:12px">
+        <div class="input-group"><label>實際濕紅糟肉量（g）← 來自配料庫存</label><div class="input-row"><input type="number" id="z-sea-red-g" value="0" readonly style="background:#eef7f0;color:var(--green);font-weight:700"></div></div>
+      </div>
+      <table class="data-table"><thead><tr><th>品名</th><th class="num">基準量（兩/6000g）</th><th class="num">基準斤兩</th><th class="num">本次用量</th></tr></thead><tbody id="z-sea-red-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <!-- === 子頁 4: 本次用量斤兩 === -->
+  <div id="zpage-cur" class="zpage" style="display:block">
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">📋 粽子當天製作斤兩及乾貨調味</div>
+      <p id="z-cur-pan-info" style="font-size:13px;color:var(--ink3)"></p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin-bottom:16px" id="z-cur-seasoning-grid"></div>
+    <div class="card">
+      <div class="card-title">🧂 各乾貨調味斤兩（依實際用量）</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px" id="z-cur-meat-grid"></div>
+    </div>
+  </div>
+
+</div><!-- end tab-zongzi -->
+
+<!-- ===== TAB 6: 油飯 ===== -->
+<div id="tab-oily-rice" class="section">
+  <div class="section-title">油飯斤兩管理</div>
+
+  <!-- 油飯子頁籤 -->
+  <div style="background:var(--ink2);display:flex;overflow-x:auto;gap:2px;padding:0 8px;border-bottom:2px solid var(--border);border-radius:8px 8px 0 0;margin-bottom:16px">
+    <button class="tab-btn active" id="ortab-btn-make" onclick="orShowPage('orpage-make',this)" style="font-size:12px;padding:8px 14px">🍳 油飯當天製作斤兩及食材備量</button>
+    <button class="tab-btn" id="ortab-btn-seasoning" onclick="orShowPage('orpage-seasoning',this)" style="font-size:12px;padding:8px 14px">🧂 食材調味料</button>
+    <button class="tab-btn" id="ortab-btn-recipe" onclick="orShowPage('orpage-recipe',this)" style="font-size:12px;padding:8px 14px">📋 油飯調味料原始斤兩</button>
+  </div>
+
+  <!-- 子頁: 油飯調味料原始斤兩 -->
+  <div id="orpage-recipe" class="orpage" style="display:none">
+
+  <!-- 油飯拌飯醬配方 -->
+  <div class="card">
+    <div class="card-title">油飯拌飯醬配方（以1袋米為基準）</div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:6px;letter-spacing:1px;padding:6px 10px;background:linear-gradient(135deg,#f7faec,#eaf0d4);border-radius:4px">🥣 拌料醬（沙拉油 ～ 菜脯料）</div>
+    <div id="rice-recipe-sauce" class="daily-chips"></div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--ink2);margin:14px 0 6px;letter-spacing:1px;padding:6px 10px;background:linear-gradient(135deg,#e8f5e9,#d4edda);border-radius:4px">🍚 拌飯醬（拌料醬 ＋ 香菇頭絲、紅糟肉絲、香菇絲、薑汁）</div>
+    <div id="rice-recipe-mix" class="daily-chips"></div>
+    <div id="rice-mix-total" style="margin-top:10px;padding:10px 14px;background:linear-gradient(135deg,#e8f5e9,#d4edda);border:1px solid #a8d5b5;border-radius:6px;font-size:14px;font-weight:700;color:#155724"></div>
+  </div>
+
+  <!-- 飯上料比例 -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">飯上料比例（以1袋米為基準）</div>
+    <div id="oily-top-chips" class="daily-chips"></div>
+    <div id="oily-top-total" style="margin-top:12px;padding:10px 14px;background:linear-gradient(135deg,#f7faec,#eaf0d4);border:1px solid var(--border);border-radius:6px;font-size:14px;font-weight:700;color:var(--ink2)"></div>
+  </div>
+
+  <!-- 薑汁比例 -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">薑汁比例</div>
+    <div class="daily-chips">
+      <div class="daily-chip"><div class="chip-label">薑<div style="font-size:10px;color:var(--ink3)">兩</div></div><div class="chip-value"><input type="number" id="ginger-base-jin" value="13" step="0.1" min="0" style="width:64px;padding:2px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#ffffff;color:var(--red);font-family:Noto Sans TC,sans-serif" oninput="recalcFryRice()"></div></div>
+      <div class="daily-chip"><div class="chip-label">香油<div style="font-size:10px;color:var(--ink3)">兩</div></div><div class="chip-value"><input type="number" id="ginger-base-oil" value="11" step="0.1" min="0" style="width:64px;padding:2px 4px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:700;text-align:center;background:#ffffff;color:var(--red);font-family:Noto Sans TC,sans-serif" oninput="recalcFryRice()"></div></div>
+    </div>
+  </div>
+
+  </div><!-- end orpage-recipe -->
+
+  <!-- 子頁: 油飯當天製作斤兩及食材備量 -->
+  <div id="orpage-make" class="orpage" style="display:block">
+  <div class="notice">依「油飯（盤）＋猴菇荷葉油飯（盤）」總盤數自動換算，基準為 <strong>48盤 = 13.5袋米</strong>，袋米數無條件進位至整數袋，各項用量 = 換算袋數 × 油飯斤兩一覽表1袋基準值</div>
+
+  <!-- 本次盤數摘要 -->
+  <div class="summary-banner" style="margin-bottom:16px">
+    <div class="summary-item">
+      <div class="s-label">油飯</div>
+      <div class="s-val" id="fry_oily_pans">0</div>
+      <div class="s-unit">盤</div>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-item">
+      <div class="s-label">猴菇荷葉油飯</div>
+      <div class="s-val" id="fry_monkey_pans">0</div>
+      <div class="s-unit">盤</div>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-item">
+      <div class="s-label">總盤數</div>
+      <div class="s-val" id="fry_total_pans">0</div>
+      <div class="s-unit">盤</div>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-item">
+      <div class="s-label">換算袋米</div>
+      <div class="s-val" id="fry_rice_bags">0</div>
+      <div class="s-unit">袋</div>
+    </div>
+  </div>
+
+  <!-- 拌料醬用量 -->
+  <div class="card">
+    <div class="card-title">🥣 拌料醬用量（沙拉油 ～ 菜脯料）</div>
+    <div id="fry-sauce-chips" class="daily-chips"></div>
+    <div id="fry-sauce-total" style="margin-top:10px;padding:10px 14px;background:linear-gradient(135deg,#f7faec,#eaf0d4);border:1px solid var(--border);border-radius:6px;font-size:14px;font-weight:700;color:var(--ink2)"></div>
+  </div>
+
+  <!-- 粽子=0 且 油飯>0 時：顯示香菇頭料、香椿醬、菜脯料需炒量 -->
+  <div id="fry-caipo-sauce-block" style="display:none;margin-top:16px">
+    <div class="card">
+      <div class="card-title">🥣 香菇頭料・香椿醬・菜脯料需炒量（依拌料醬菜脯料用量計算）</div>
+      <div id="fry-caipo-sauce-notice" class="notice" style="margin-bottom:12px">粽子總數為 0，依油飯拌料醬的<strong>菜脯料</strong>用量，按粽子原始調味料比例反推香菇頭料與香椿醬需炒量。</div>
+      <div id="fry-caipo-sauce-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
+    </div>
+  </div>
+
+  <!-- 拌飯醬額外食材 + 飯上料用量（同一行） -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+    <div class="card" style="margin-top:0">
+      <div class="card-title">🍚 拌飯醬額外食材（香菇頭絲、紅糟肉絲、香菇絲、薑汁）</div>
+      <div id="fry-mix-chips" class="daily-chips"></div>
+      <div id="fry-mix-total" style="margin-top:10px;padding:10px 14px;background:linear-gradient(135deg,#e8f5e9,#d4edda);border:1px solid #a8d5b5;border-radius:6px;font-size:14px;font-weight:700;color:#155724"></div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <div class="daily-chip">
+          <div class="chip-label">平均分成幾盆</div>
+          <div class="chip-value" id="fry-mix-basins">—</div>
+        </div>
+        <div class="daily-chip" style="background:linear-gradient(135deg,#e8f5e9,#d4edda);border-color:#a8d5b5">
+          <div class="chip-label">每盆重量</div>
+          <div class="chip-value" id="fry-mix-per-basin" style="color:#155724">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:0">
+      <div class="card-title">🍽 飯上料用量</div>
+      <div id="fry-top-chips" class="daily-chips"></div>
+      <div id="fry-top-total" style="margin-top:12px;padding:10px 14px;background:linear-gradient(135deg,#f7faec,#eaf0d4);border:1px solid var(--border);border-radius:6px;font-size:14px;font-weight:700;color:var(--ink2)"></div>
+    </div>
+  </div>
+
+  <!-- 薑汁用量 + 紅糟肉絲 + 香菇頭絲 + 栗子 + 香菇 -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-top:16px">
+
+    <!-- 薑汁用量 + 香菇頭絲 -->
+    <div class="card" style="margin-top:0">
+      <div class="card-title">🫚 薑汁用量</div>
+      <div id="fry-ginger-chips" class="daily-chips"></div>
+      <div class="notice" style="margin-top:8px;margin-bottom:0;font-size:11px">薑汁合計 = 拌飯醬薑汁（riceData薑汁base × 總袋數）＋ 飯上料薑汁（oilyTopData薑汁base × 油飯袋數）<br>薑／香油依比例設定分配</div>
+      <div style="height:12px"></div>
+      <div style="font-size:14px;font-weight:700;color:var(--ink2);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border-light);letter-spacing:1px">🍄 香菇頭絲用量</div>
+      <div class="daily-chips">
+        <div class="daily-chip">
+          <div class="chip-label">拌飯醬</div>
+          <div class="chip-value" id="fry-mushrhead-mix">—</div>
+        </div>
+        <div class="daily-chip">
+          <div class="chip-label">飯上料</div>
+          <div class="chip-value" id="fry-mushrhead-top">—</div>
+        </div>
+        <div class="daily-chip" style="background:linear-gradient(135deg,#fde8e8,#f8d0d0);border-color:#e8a0a0">
+          <div class="chip-label">合計</div>
+          <div class="chip-value" id="fry-mushrhead-total" style="color:var(--red)">—</div>
+        </div>
+        <div class="daily-chip" style="background:linear-gradient(135deg,#e8eafd,#d0d4f8);border-color:#a0a8e8">
+          <div class="chip-label">換算包數</div>
+          <div class="chip-value" id="fry-mushrhead-pkgs" style="color:#2c35a0">—</div>
+        </div>
+      </div>
+      <div class="notice" style="margin-top:8px;margin-bottom:0;font-size:11px">換算包數 = 合計（斤）÷ 2，無條件進位</div>
+    </div>
+
+    <!-- 炸香菇絲 -->
+    <div class="card" style="margin-top:0">
+      <div class="card-title">🍄 炸香菇絲用量</div>
+      <div class="daily-chips">
+        <div class="daily-chip">
+          <div class="chip-label">拌飯醬香菇絲</div>
+          <div class="chip-value" id="fry-friedmushr-mix">—</div>
+        </div>
+        <div class="daily-chip">
+          <div class="chip-label">飯上料香菇絲</div>
+          <div class="chip-value" id="fry-friedmushr-top">—</div>
+        </div>
+        <div class="daily-chip" style="background:linear-gradient(135deg,#fde8e8,#f8d0d0);border-color:#e8a0a0">
+          <div class="chip-label">合計</div>
+          <div class="chip-value" id="fry-friedmushr-total" style="color:var(--red)">—</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--ink3);font-weight:700">庫存量（兩）：</span>
+        <span id="fry-friedmushr-inv" style="font-size:14px;font-weight:700;color:var(--green)">0</span>
+        <span style="font-size:12px;color:var(--ink3)">兩</span>
+        <span style="font-size:11px;color:var(--ink3)">（同製作數量輸入的油飯香菇絲）</span>
+      </div>
+      <div class="daily-chips" style="margin-top:10px">
+        <div class="daily-chip" style="background:linear-gradient(135deg,#fff3e0,#ffe0b2);border-color:#ffb74d">
+          <div class="chip-label">需求量</div>
+          <div class="chip-value" id="fry-friedmushr-need" style="color:#e65100">—</div>
+        </div>
+        <div class="daily-chip" style="background:linear-gradient(135deg,#e8f5e9,#d4edda);border-color:#a8d5b5">
+          <div class="chip-label">乾香菇</div>
+          <div class="chip-value" id="fry-friedmushr-dry" style="color:#155724">—</div>
+        </div>
+      </div>
+      <div class="notice" style="margin-top:8px;margin-bottom:0;font-size:11px">乾香菇 = 需求量 ÷ 3（無條件進位）<br>備註：乾的泡發約3倍</div>
+    </div>
+
+    <!-- 紅糟肉絲 -->
+    <div class="card" style="margin-top:0">
+      <div class="card-title">🥩 紅糟肉絲用量</div>
+      <div class="daily-chips">
+        <div class="daily-chip">
+          <div class="chip-label">拌飯醬</div>
+          <div class="chip-value" id="fry-redshred-mix">—</div>
+        </div>
+        <div class="daily-chip">
+          <div class="chip-label">飯上料</div>
+          <div class="chip-value" id="fry-redshred-top">—</div>
+        </div>
+        <div class="daily-chip">
+          <div class="chip-label">鋪面料</div>
+          <div class="chip-value" id="fry-redshred-cover">—</div>
+        </div>
+        <div class="daily-chip" style="background:linear-gradient(135deg,#fde8e8,#f8d0d0);border-color:#e8a0a0">
+          <div class="chip-label">合計</div>
+          <div class="chip-value" id="fry-redshred-total" style="color:var(--red)">—</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--ink3);font-weight:700">庫存量（兩）：</span>
+        <input type="number" id="fry-redshred-inv" min="0" value="0"
+          style="width:72px;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;font-size:14px;font-family:'Noto Sans TC',sans-serif;color:var(--red);font-weight:700;text-align:center"
+          oninput="recalcFryRice()">
+        <span style="font-size:12px;color:var(--ink3)">兩</span>
+      </div>
+      <div class="daily-chips" style="margin-top:10px">
+        <div class="daily-chip" style="background:linear-gradient(135deg,#fff3e0,#ffe0b2);border-color:#ffb74d">
+          <div class="chip-label">需求量（兩）</div>
+          <div class="chip-value" id="fry-redshred-need" style="color:#e65100">—</div>
+        </div>
+        <div class="daily-chip" style="background:linear-gradient(135deg,#fce4ec,#f8bbd0);border-color:#f48fb1">
+          <div class="chip-label">炸前換算斤兩</div>
+          <div class="chip-value" id="fry-redshred-raw" style="color:var(--red)">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 栗子 -->
+    <div class="card" style="margin-top:0">
+      <div class="card-title">🌰 栗子用量</div>
+      <div class="daily-chips">
+        <div class="daily-chip">
+          <div class="chip-label">油飯盒數</div>
+          <div class="chip-value" id="fry-chestnut-boxes">—</div>
+        </div>
+        <div class="daily-chip" style="我是一个文本 AI，这超出了我的能力范围。
